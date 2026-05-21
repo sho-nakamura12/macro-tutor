@@ -6,7 +6,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 
-
 from .models import Student, Unit, UnitMaster
 from .forms import (
     StudentForm,
@@ -17,7 +16,8 @@ from .forms import (
 
 @login_required
 def student_list(request):
-    students = Student.objects.all()
+    students = Student.objects.filter(teacher=request.user)
+    
     today_weekday = timezone.localtime().weekday()
     is_today_filter = request.GET.get('filter') == 'today'
 
@@ -39,7 +39,10 @@ def create_student_with_units(request):
         form = StudentForm(request.POST)
         if form.is_valid():
             with transaction.atomic(): 
-                student = form.save() 
+                student = form.save(commit=False)
+                student.teacher = request.user
+                student.save()
+                
                 selected_ids = request.POST.getlist("unit_master_ids")
                 
                 if selected_ids:
@@ -66,7 +69,7 @@ def create_student_with_units(request):
 @login_required
 def update_unit_status(request, unit_id):
     """ HTMXからのリクエストを受け取り、ステータスを次の段階へ進める """
-    unit = get_object_or_404(Unit, pk=unit_id)
+    unit = get_object_or_404(Unit, pk=unit_id, student__teacher=request.user)
     unit.cycle_status() 
 
     student = unit.student
@@ -103,7 +106,7 @@ def unitmaster_api(request):
 
 @login_required
 def student_detail(request, pk):
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     units = Unit.objects.filter(student=student).select_related("unit_master")
 
     return render(request, "macrotutor/student_detail.html", {
@@ -115,7 +118,7 @@ def student_detail(request, pk):
 @login_required
 def delete_unit(request, pk, unit_id):
     """ 同期削除（フォーム送信用） """
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     unit = get_object_or_404(Unit, id=unit_id, student=student)
 
     if request.method == "POST":
@@ -128,7 +131,7 @@ def delete_unit(request, pk, unit_id):
 @login_required
 def add_unit(request, pk):
     """ 単体追加 """
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     existing_master_ids = student.units.values_list("unit_master_id", flat=True)
 
     grade = request.GET.get("grade")
@@ -164,12 +167,9 @@ def add_unit(request, pk):
     })
 
 
-
-
-
 @login_required
 def edit_student(request, pk):
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
 
     if request.method == "POST":
         form = StudentForm(request.POST, instance=student)
@@ -189,7 +189,7 @@ def edit_student(request, pk):
 @require_POST
 @login_required
 def delete_student(request, pk):
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     student_name = student.name
     student.delete()
     
@@ -200,7 +200,7 @@ def delete_student(request, pk):
 @require_POST
 @login_required
 def delete_all_units(request, pk):
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     deleted_count, _ = Unit.objects.filter(student=student).delete()
     
     messages.success(request, f"🗑️ 定期テストお疲れ様でした！ {deleted_count}件の単元をリセットしました。")
@@ -210,14 +210,14 @@ def delete_all_units(request, pk):
 @require_POST
 @login_required
 def delete_unit_ajax(request, pk):
-    unit = get_object_or_404(Unit, id=pk)
+    unit = get_object_or_404(Unit, id=pk, student__teacher=request.user)
     unit.delete()
     return JsonResponse({"success": True})
 
 
 @login_required
 def add_units(request, pk):
-    student = get_object_or_404(Student, id=pk)
+    student = get_object_or_404(Student, id=pk, teacher=request.user)
     search_form = AddUnitsSearchForm(request.GET or None)
     queryset = UnitMaster.objects.all()
 
@@ -238,7 +238,6 @@ def add_units(request, pk):
             selected = select_form.cleaned_data["unit_master_ids"]
             to_create = []
             
-            # 既に登録済みの単元を再度フィルタリング（安全対策）
             for um in selected:
                 if um.id not in existing_ids:
                     to_create.append(Unit(student=student, unit_master=um, status=Unit.Status.NOT_STARTED))

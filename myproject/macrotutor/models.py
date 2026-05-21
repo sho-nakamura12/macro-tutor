@@ -2,7 +2,7 @@ from datetime import date
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-
+from django.contrib.auth.models import User
 
 class GradeChoices(models.TextChoices):
     GRADE_1 = "GRADE_1", "1年"
@@ -37,7 +37,8 @@ class Student(models.Model):
     class SemesterType(models.TextChoices):
         TWO = "TWO", "2学期制"
         THREE = "THREE", "3学期制"
-   
+        
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='students', null=True, blank=True)
     name = models.CharField(max_length=100)
     grade = models.CharField(choices=GradeChoices.choices, max_length=20)
     semester_type = models.CharField(choices=SemesterType.choices, max_length=20)
