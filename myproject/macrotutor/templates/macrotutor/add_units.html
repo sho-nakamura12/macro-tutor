@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}単元の追加 - Macro Tutor{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        padding: 18px;
+        color: #222;
+    }
+    h1 {
+        margin-bottom: 12px;
+    }
+    .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        cursor: pointer;
+    }
+    .btn-primary {
+        background: #00acc1;
+        color: #fff;
+        border-color: #00acc1;
+    }
+    .btn-ghost {
+        background: transparent;
+        border: 1px solid #00acc1;
+        color: #00acc1;
+    }
+    .search-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+    .search-form select, 
+    .search-form button {
+        height: 36px;
+    }
+    .unit-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    .unit-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        background: #fff;
+        transition: 0.12s ease;
+        cursor: pointer;
+    }
+    .unit-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .unit-card.selected {
+        background: #e8f7f8;
+        border-color: #00acc1;
+    }
+    .unit-meta {
+        flex: 1;
+    }
+    .unit-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .unit-sub {
+        color: #666;
+        font-size: 13px;
+    }
+    .unit-card input[type="checkbox"] {
+        transform: scale(1.2);
+        margin-right: 8px;
+    }
+    .actions {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .selected-count {
+        color: #555;
+        font-size: 14px;
+    }
+    @media (max-width: 480px) {
+        .controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .search-form {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>単元を追加する — {{ student.name }}</h1>
+
+<form method="get" class="search-form" action="">
+    {{ search_form.grade.label_tag }} {{ search_form.grade }}
+    {{ search_form.subject.label_tag }} {{ search_form.subject }}
+    <button type="submit" class="btn">検索</button>
+    <a href="{% url 'macrotutor:student_detail' student.id %}" class="btn btn-ghost">戻る</a>
+</form>
+
+<form method="post" id="select-form" action="">
+    {% csrf_token %}
+
+    <div>
+        <p style="margin: 6px 0 12px 0; color: #444;">
+            候補： <strong>{{ candidates.count }}</strong> 件（未登録の単元のみ表示しています）
+        </p>
+    </div>
+
+    <ul class="unit-grid" id="unit-grid">
+        {% for um in candidates %}
+            <li class="unit-card" data-um-id="{{ um.id }}">
+                <input type="checkbox" name="unit_master_ids" value="{{ um.id }}" id="um-{{ um.id }}">
+                <div class="unit-meta">
+                    <div class="unit-title">{{ um.unit_name }}</div>
+                    <div class="unit-sub">{{ um.get_subject_display }} / {{ um.get_grade_display }}</div>
+                </div>
+            </li>
+        {% empty %}
+            <p>候補が見つかりません。検索条件を変えてください。</p>
+        {% endfor %}
+    </ul>
+
+    <div class="actions">
+        <button type="submit" class="btn btn-primary" id="add-selected-btn">選択した単元を追加</button>
+        <button type="button" class="btn" id="clear-selection-btn">選択解除</button>
+        <span class="selected-count" id="selected-count">選択中: 0</span>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function() {
+        const grid = document.getElementById('unit-grid');
+        const selectedCountEl = document.getElementById('selected-count');
+        const clearBtn = document.getElementById('clear-selection-btn');
+
+        // 選択中のチェックボックス数を集計・表示
+        function updateSelectedCount() {
+            const checked = grid.querySelectorAll('input[type="checkbox"]:checked').length;
+            selectedCountEl.textContent = `選択中: ${checked}`;
+        }
+
+        // イベント委譲によるクリックイベントの一元管理
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.unit-card');
+            if (!card) return;
+            
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            if (!checkbox) return;
+            
+            if (e.target.tagName.toLowerCase() !== 'input') {
+                checkbox.checked = !checkbox.checked;
+            }
+            
+            card.classList.toggle('selected', checkbox.checked);
+            updateSelectedCount();
+        });
+
+        // 全選択解除処理
+        clearBtn.addEventListener('click', () => {
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                const card = cb.closest('.unit-card');
+                if (card) card.classList.remove('selected');
+            });
+            updateSelectedCount();
+        });
+
+        // 初期実行
+        updateSelectedCount();
+
+        // フォーム送信時バリデーション ＆ 二重送信防止対策
+        const form = document.getElementById('select-form');
+        const submitBtn = document.getElementById('add-selected-btn');
+        
+        form.addEventListener('submit', (e) => {
+            const checked = grid.querySelectorAll('input[type="checkbox"]:checked').length;
+            
+            if (checked === 0) {
+                e.preventDefault();
+                alert('追加する単元を1つ以上選択してください。');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = '追加中...';
+        });
+    })();
+</script>
+{% endblock %}

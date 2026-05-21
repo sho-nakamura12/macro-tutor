@@ -1,0 +1,86 @@
+{% if not deleted %}
+  <li class="unit-card"
+      id="unit-{{ unit.id }}"
+      data-unit-id="{{ unit.id }}"
+      data-status="{{ unit.status }}"
+      style="display: flex; flex-direction: column; justify-content: space-between;"
+  >
+    <div class="top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <div class="left">
+        <div class="unit-name" style="font-weight: bold; font-size: 16px; margin-bottom: 10px;">
+          {{ unit.unit_master.unit_name }}
+        </div>
+        
+        <button type="button"
+                hx-post="{% url 'macrotutor:update_unit_status' unit.id %}"
+                hx-target="#unit-{{ unit.id }}"
+                hx-swap="outerHTML"
+                style="
+                  display: inline-flex; align-items: center; gap: 6px;
+                  padding: 6px 14px; border-radius: 20px;
+                  border: 1px solid #00acc1; background-color: #f0fbfc; color: #00acc1;
+                  font-size: 13px; font-weight: bold; cursor: pointer;
+                  transition: all 0.2s ease;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                "
+                onmouseover="this.style.backgroundColor='#e0f7fa'; this.style.transform='translateY(-1px)';"
+                onmouseout="this.style.backgroundColor='#f0fbfc'; this.style.transform='translateY(0)';"
+        >
+          🔄 状態: 
+          {% if unit.status == 0 %}未着手
+          {% elif unit.status == 1 %}理解した
+          {% elif unit.status == 2 %}解ける
+          {% else %}完璧{% endif %}
+          <span style="font-size: 11px; font-weight: normal; color: #666;">(クリックで進む)</span>
+        </button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="status-bar status-{{ unit.status }}" aria-hidden="true"></div>
+
+        <button class="delete-unit-btn"
+                hx-post="{% url 'macrotutor:delete_unit_ajax' unit.id %}"
+                hx-target="closest .unit-card" 
+                hx-swap="outerHTML"
+                hx-confirm="「{{ unit.unit_master.unit_name }}」を本当に削除しますか？"
+                aria-label="削除"
+                style="border:none; background:none; cursor:pointer; color:#d9534f; font-size:18px;"
+        >
+          🗑
+        </button>
+      </div>
+    </div>
+
+    <div class="status-desc" data-status-desc style="font-size: 13px; color: #666; border-top: 1px dashed #eee; padding-top: 8px;">
+      {% if unit.status == 0 %}
+        まだ始めていません。まずは基礎を確認しましょう。
+      {% elif unit.status == 1 %}
+        基本的な内容は理解しています。練習問題で定着させましょう。
+      {% elif unit.status == 2 %}
+        問題を自力で解けます。応用問題に挑戦してみてください。
+      {% else %}
+        完璧に理解しています。復習は軽めでOKです。
+      {% endif %}
+    </div>
+  </li>
+{% endif %}
+
+{% if current_progress is not None %}
+  <div id="progress-container" hx-swap-oob="true" style="margin: 20px 0; padding: 14px; border: 1px solid #ccc; border-radius: 10px; width: 300px; background: white;">
+    <h3 style="margin-top: 0;">進捗状況</h3>
+    <div style="margin-bottom: 10px;">
+      <strong>現在の進捗：</strong>
+      <span id="current-progress">{{ current_progress }}</span>%
+      <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
+        <div id="current-progress-bar" style="width: {{ current_progress }}%; height:10px; background:#4CAF50; border-radius:5px; transition: width 0.3s ease;"></div>
+      </div>
+    </div>
+    <div>
+      <strong>推奨進捗：</strong>
+      <span id="recommended-progress">{{ recommended_progress }}</span>%
+      <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
+        <div id="recommended-progress-bar" style="width: {{ recommended_progress }}%; height:10px; background:#00acc1; border-radius:5px;"></div>
+      </div>
+    </div>
+  </div>
+{% endif %}

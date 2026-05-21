@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.name }} の詳細 - Macro Tutor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .unit-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 0;
+        list-style: none;
+    }
+    .unit-card {
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 12px;
+        width: calc(33.333% - 8px);
+        box-sizing: border-box;
+        transition: box-shadow 0.2s ease;
+    }
+    .unit-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .unit-meta {
+        margin-top: 8px;
+        font-size: 14px;
+        color: #555;
+    }
+    .floating-add-button {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        text-decoration: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        transition: background-color 0.2s;
+    }
+    .floating-add-button:hover {
+        background-color: #388E3C;
+    }
+
+    /* 削除確認モーダル用のCSS */
+    .modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.4);
+        z-index: 1000;
+    }
+    .modal[hidden] {
+        display: none;
+    }
+    .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .modal-buttons {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+    .danger {
+        background: #d9534f;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .neutral {
+        background: #eee;
+        color: #333;
+        border: 1px solid #ccc;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ student.name }} の詳細</h1>
+
+<div style="margin-bottom: 15px;">
+    <a href="{% url 'macrotutor:edit_student' student.id %}" style="display: inline-block; padding: 6px 12px; background: #eee; color: #333; text-decoration: none; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-weight: bold;">
+        ✏️ 生徒情報を編集する
+    </a>
+</div>
+
+<p style="margin: 8px 0; font-size: 14px;"><strong>学年：</strong> {{ student.get_grade_display }}</p>
+<p style="margin: 8px 0; font-size: 14px;"><strong>学期制：</strong> {{ student.get_semester_type_display }}</p>
+<p style="margin: 8px 0; font-size: 14px;"><strong>開始日：</strong> {{ student.start_date }}</p>
+<p style="margin: 8px 0; font-size: 14px;">
+    <strong>テスト日：</strong> 
+    {% if student.test_date %}
+        <span style="color: #d9534f; font-weight: bold; background: #fdf0ef; padding: 2px 6px; border-radius: 4px;">
+            🎯 {{ student.test_date }}
+        </span>
+    {% else %}
+        <span style="color: #999;">未設定</span>
+    {% endif %}
+</p>
+
+<div id="progress-container" style="margin: 20px 0; padding: 14px; border: 1px solid #ccc; border-radius: 10px; width: 300px; background: white;">
+    <h3 style="margin-top: 0;">進捗状況</h3>
+    
+    <div style="margin-bottom: 10px;">
+        <strong>現在の進捗：</strong>
+        <span id="current-progress">{{ student.calculate_current_progress }}</span>%
+        <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
+            <div id="current-progress-bar" style="width: {{ student.calculate_current_progress }}%; height:10px; background:#4CAF50; border-radius:5px; transition: width 0.3s ease;"></div>
+        </div>
+    </div>
+
+    <div>
+        <strong>推奨進捗：</strong>
+        <span id="recommended-progress">{{ student.calculate_recommended_progress }}</span>%
+        <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
+            <div id="recommended-progress-bar" style="width: {{ student.calculate_recommended_progress }}%; height:10px; background:#00acc1; border-radius:5px;"></div>
+        </div>
+    </div>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <a href="{% url 'macrotutor:student_list' %}" style="text-decoration: none; color: #00acc1; font-weight: bold;">← ホームに戻る</a>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+    <h2 style="margin: 0;">単元一覧</h2>
+    
+    <form method="POST" action="{% url 'macrotutor:delete_all_units' student.id %}" onsubmit="return confirm('⚠️ 定期テストお疲れ様でした！\n現在の単元と進捗を【すべてリセット（全削除）】してよろしいですか？');" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" style="padding: 8px 15px; background: #ef5350; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s;">
+            🗑️ すべてリセット
+        </button>
+    </form>
+</div>
+
+<ul class="unit-grid" id="unit-grid">
+    {% for unit in units %}
+        {% include 'macrotutor/unit_card.html' %}
+    {% endfor %}
+</ul>
+
+<div id="confirm-modal" class="modal" hidden>
+    <div class="modal-content">
+        <p id="confirm-message">本当に削除しますか？</p>
+        <div class="modal-buttons">
+            <button id="confirm-yes" class="danger">はい</button>
+            <button id="confirm-no" class="neutral">いいえ</button>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'macrotutor:add_units' student.id %}" class="floating-add-button">＋</a>
+{% endblock %}

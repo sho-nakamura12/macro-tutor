@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}ログイン - Macro Tutor{% endblock %}
+
+{% block content %}
+<h2>ログイン</h2>
+
+<form method="post" action="">
+    {% csrf_token %}
+    
+    {{ form.as_p }}
+    
+    <button type="submit" style="padding: 8px 16px; background: #00acc1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+        ログイン
+    </button>
+    
+    <input type="hidden" name="next" value="{{ next }}">
+</form>
+{% endblock %}

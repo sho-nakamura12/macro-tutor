@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.name }} の情報を編集 - Macro Tutor{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-text {
+        color: red;
+        font-size: 14px;
+        margin-top: 2px;
+    }
+    form p {
+        margin-bottom: 15px;
+    }
+    .form-control-wrapper input, 
+    .form-control-wrapper select {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+        max-width: 300px;
+        box-sizing: border-box;
+    }
+    .btn-group {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .btn-submit {
+        padding: 10px 20px;
+        background: #00acc1;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-cancel {
+        padding: 10px 20px;
+        background: #eee;
+        color: #333;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        border: 1px solid #ccc;
+    }
+    .checkbox-group > div, 
+    .checkbox-group > ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    .checkbox-group label {
+        display: flex !important;
+        align-items: center !important;
+        gap: 5px;
+        font-weight: normal !important;
+        cursor: pointer;
+        margin: 0 !important;
+    }
+    .checkbox-group input[type="checkbox"] {
+        margin: 0 !important;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>生徒情報の編集</h1>
+<p style="color: #666;">{{ student.name }} さんの基本情報と目標（テスト日）を編集します。</p>
+
+<form method="POST">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div style="background: #fdd; color: red; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    <div class="form-control-wrapper">
+        <p>
+            <label><strong>名前：</strong></label><br>
+            {{ form.name }}
+            <div class="error-text">{{ form.name.errors }}</div>
+        </p>
+
+        <p>
+            <label><strong>学年：</strong></label><br>
+            {{ form.grade }}
+            <div class="error-text">{{ form.grade.errors }}</div>
+        </p>
+
+        <p>
+            <label><strong>学期制：</strong></label><br>
+            {{ form.semester_type }}
+            <div class="error-text">{{ form.semester_type.errors }}</div>
+        </p>
+
+        <p>
+            <label><strong>開始日：</strong></label><br>
+            {{ form.start_date }}
+            <div class="error-text">{{ form.start_date.errors }}</div>
+        </p>
+
+        <p>
+            <label><strong>テスト日（任意）：</strong></label><br>
+            {{ form.test_date }}
+            <div class="error-text">{{ form.test_date.errors }}</div>
+        </p>
+
+        <p>
+            <label><strong>指導曜日（複数選択可）：</strong></label><br>
+            <div class="checkbox-group" style="background: #fdfdfd; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                {{ form.tutoring_days_checkbox }}
+            </div>
+            <div class="error-text">{{ form.tutoring_days_checkbox.errors }}</div>
+        </p>
+    </div>
+
+    <div class="btn-group">
+        <button type="submit" class="btn-submit">
+            変更を保存
+        </button>
+        <a href="{% url 'macrotutor:student_detail' student.id %}" class="btn-cancel">
+            キャンセル
+        </a>
+    </div>
+</form>
+
+<div style="margin-top: 15px; max-width: 400px; text-align: right;">
+    <form method="POST" action="{% url 'macrotutor:delete_student' student.id %}" 
+          onsubmit="return confirm('⚠️本当にこの生徒のデータを削除しますか？\n登録されているすべての単元や進捗データが完全に消去されます。');" 
+          style="margin: 0; display: inline-block;">
+        {% csrf_token %}
+        <button type="submit" style="padding: 10px 15px; background: #ef5350; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">
+            🗑️ 生徒を削除
+        </button>
+    </form>
+</div>
+{% endblock %}

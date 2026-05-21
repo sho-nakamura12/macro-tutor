@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}生徒一覧 - Macro Tutor{% endblock %}
+
+{% block extra_css %}
+<style>
+  .student-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .student-card {
+    display: block;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 18px;
+    color: #333;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: 0.15s ease;
+  }
+
+  .student-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  
+  .add-student-card {
+    display: block;
+    position: fixed;
+    right: 20px;   
+    bottom: 30px;
+    background: #4CAF50; 
+    color: white;
+    padding: 24px;
+    border-radius: 14px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    transition: 0.15s ease;
+  }
+
+  .add-student-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h1 style="margin-top: 0;">ホーム</h1>
+  
+  <div style="margin: 0 0 20px 0; display: flex; gap: 10px;">
+      
+      <a href="{% url 'macrotutor:student_list' %}" 
+         style="padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 14px; transition: 0.2s;
+                {% if not is_today_filter %}background: #333; color: white;{% else %}background: #eee; color: #666;{% endif %}">
+          👥 すべての生徒
+      </a>
+
+      <a href="{% url 'macrotutor:student_list' %}?filter=today" 
+         style="padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 14px; transition: 0.2s;
+                {% if is_today_filter %}background: #00acc1; color: white;{% else %}background: #eee; color: #666;{% endif %}">
+          📅 今日の生徒
+      </a>
+  </div>
+
+  <ul class="student-list">
+    {% for student in students %}
+      <li>
+        <a class="student-card" href="{% url 'macrotutor:student_detail' student.id %}">
+          {{ student.name }}
+        </a>
+      </li>
+    {% empty %}
+      <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #fdfdfd; border: 2px dashed #ddd; border-radius: 12px; margin-top: 20px;">
+          <p style="font-size: 40px; margin: 0 0 15px 0;">🐣</p>
+          <h3 style="color: #555; margin-bottom: 10px;">表示する生徒がいません</h3>
+          {% if is_today_filter %}
+              <p style="color: #888; font-size: 15px;">今日の指導予定の生徒はいません。ゆっくり休みましょう☕</p>
+          {% else %}
+              <p style="color: #888; font-size: 15px;">右下のボタンから、最初の生徒を登録して学習をスタートしましょう！</p>
+          {% endif %}
+      </div>
+    {% endfor %}
+  </ul>
+  </ul>
+
+  <a class="add-student-card" href="{% url 'macrotutor:add_student' %}">
+    ＋ 生徒を追加
+  </a>
+{% endblock %}
